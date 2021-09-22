@@ -9,6 +9,7 @@
 # define FLAG_ESCAPE 8
 
 # define MAX_FUNC 500
+# define MAX_FILE 200
 
 int ft_strlen(char *s)
 {
@@ -85,11 +86,12 @@ char *newstrcat(char *s1, char *s2)
 	char *ret;
 	int i;
 
-	if ((ret = (char *)malloc(ft_strlen(s1) + ft_strlen(s2) + 1)))
+	if ((ret = (char *)malloc(ft_strlen(s1) + ft_strlen(s2) + 2)))
 	{
 		i = -1;
 		while (s1[++i])
 			ret[i] = s1[i];
+		ret[i++] = '\n';
 		while (*s2)
 		{
 			ret[i++] = *s2;
@@ -150,10 +152,6 @@ int is_next_curly_bracket(int fd)
 	return (0);
 }
 
-int zzz(char *s){
-	return (1);
-}
-
 int is_func_dec(char *s, int fd)
 {
 	int i;
@@ -169,9 +167,7 @@ int is_func_dec(char *s, int fd)
 			while (is_blank(s[++i]))
 				;
 			if (s[i] == '{')
-			{write(1, "a\n", 2);
 				return (1);
-			}
 			else if (s[i] == '\0')
 				return (is_next_curly_bracket(fd));
 			else
@@ -190,8 +186,6 @@ void write_to_header(int fd, char *s)
 		;
 	write(fd, s, len);
 	write(fd, ";\n", 2);
-	
-	write(1, "OK\n", 3);
 }
 
 int is_same_extension(char *s, char *extension)
@@ -213,7 +207,8 @@ int is_same_extension(char *s, char *extension)
 	return (extension[extension_len] == s[i]);
 }
 
-void	ft_qsort(unsigned long long int *array, int left, int right)
+void	ft_qsort(unsigned long long int *array,
+		int left, int right)
 {
 	int i;
 	int last;
@@ -279,16 +274,13 @@ unsigned long long int str2long(char *s)
 {
 	unsigned long long int ret;
 
-printf("\n------\n[%s]\n-------\n", s);
 	ret = 100;
 	while (*s)
 	{
 		if (!is_blank(*s))
 			ret = (ret + 1) * ft_pow(ret + (unsigned long long int)*s, (int)((*s % 27) + 3));
 		s++;
-	//printf("%llu\n",ret);
 	}
-	printf("---%llu---\n\n",ret);
 	return (ret);
 }
 
@@ -322,10 +314,10 @@ int input_existing_func(char *argv, unsigned long long int *func_name)
 
 	if ((fd = open(argv, O_RDONLY)) == -1)
 		return (0);
-	i = 0;
 	ret = 0;
 	while (get_next_line(fd, line) > 0)
 	{
+		i = 0;
 		while (bracket_num(line[!!i++]))
 			if (get_next_line(fd, line + 1) <= 0)
 				return (-1);
@@ -333,8 +325,8 @@ int input_existing_func(char *argv, unsigned long long int *func_name)
 				return (-1);
 		if (i > 1)
 			free(line[1]);
-		if (find_bracket(line[0]) >= 0 && ++ret)
-			func_name[ret] = str2long(extract_func_name(line[0]));
+		if (find_bracket(line[0]) >= 0)
+			func_name[ret++] = str2long(extract_func_name(line[0]));
 		free(line[0]);
 	}
 	close(fd);
@@ -385,17 +377,12 @@ void process_main(unsigned long long int *func_name, int func_num, int fd_read, 
 		while (bracket_num(line[!!i++]))
 		{
 			if (get_next_line(fd_read, line + 1) <= 0)
-			{write(1, "1", 1);
 				return;
-			}
 			if (!(line[0] = newstrcat(line[0], line[1])))
-			{write(1, "2", 1);
 				return;
-			}
 		}
 		if (i > 1)
 			free(line[1]);
-		printf("%s\n", line[0]);
 		if (is_func_dec(line[0], fd_read) && !is_func_existing(func_name, func_num, line[0]))
 			write_to_header(fd_write, line[0]);
 		free(line[0]);
@@ -414,32 +401,82 @@ int ini_func_name(unsigned long long int *func_name)
 	return (6);
 }
 
-int main(int argc, char *argv[])
+int is_generated_h(char *s)
+{
+	int i;
+	int len;
+
+	i = -1;
+	while (s[++i])
+		;
+	if ((len = ft_strlen("generated_header.h")) > i)
+		return (0);
+	while (len > 0)
+		if ("generated_header.h"[--len] != s[--i])
+			return (0);
+	return (i == 0 || s[i - 1] == '/');
+}
+
+int some_args(int argc, char *argv[])
 {
 	int i;
 	unsigned long long int func_name[MAX_FUNC];
 	int func_num;
 	int fd_write;
 
-	func_num = 0;
+	func_num = ini_func_name(func_name);
 	i = 0;
 	while (++i < argc)
-		if (is_same_extension(argv[i], ".h"))
+		if (is_same_extension(argv[i], ".h") && !is_generated_h(argv[i]))
 			func_num += input_existing_func(argv[i], func_name + func_num);
-			
-	func_num += ini_func_name(func_name);
 	if (func_num)
 		ft_qsort(func_name, 0, func_num - 1);
 	if ((fd_write = open("./generated_header.h", O_CREAT|O_WRONLY|O_TRUNC)) == -1)
 		return (-1);
-
-for (i = 0; i < func_num; i++)
-	printf("%llu\n", func_name[i]);
-	printf("\n\n\n");
-
 	i = 0;
 	while (++i < argc)
 		if (is_same_extension(argv[i], ".c"))
 			process_main(func_name, func_num, open(argv[i], O_RDONLY), fd_write);
 	close(fd_write);
+	return (0);
+}
+
+void no_args(int argc)
+{
+	int i;
+	unsigned long long int func_name[MAX_FUNC];
+	char *argv[MAX_FILE];
+	int func_num;
+	int fd_write;
+
+	i = -1;
+	system("find > ./generated_header.h");
+	fd_write = open("./generated_header.h", O_RDONLY);
+	while (get_next_line(fd_write, argv + ++i) > 0)
+		argc++;
+	close(fd_write);
+	func_num = ini_func_name(func_name);
+	i = 0;
+	while (++i < argc)
+		if (is_same_extension(argv[i], ".h") && !is_generated_h(argv[i]))
+			func_num += input_existing_func(argv[i], func_name + func_num);
+	if (func_num)
+		ft_qsort(func_name, 0, func_num - 1);
+	if ((fd_write = open("./generated_header.h", O_CREAT|O_WRONLY|O_TRUNC)) == -1)
+		return;
+	i = 0;
+	while (++i < argc)
+		if (is_same_extension(argv[i], ".c"))
+			process_main(func_name, func_num, open(argv[i], O_RDONLY), fd_write);
+	close(fd_write);
+}
+
+int main(int argc, char *argv[])
+{
+	
+	if (argc == 1)
+		no_args(0);
+	else
+		return (some_args(argc, argv));
+	return (0);
 }
