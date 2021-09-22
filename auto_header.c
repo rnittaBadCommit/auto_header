@@ -29,6 +29,24 @@ void ft_strcpy(char *dest, char *src)
 
 void	check_quote(char c, char *bitflag_quote)
 {
+	if (c == '\\')
+		*bitflag_quote ^= FLAG_ESCAPE;
+	else if (*bitflag_quote & FLAG_ESCAPE)
+	{
+		*bitflag_quote &= ~FLAG_ESCAPE;
+		return ;
+	}
+	if (c == '\'' && *bitflag_quote < 4 && !(*bitflag_quote
+				& FLAG_DOUBLE_QUOTE))
+		*bitflag_quote ^= FLAG_SINGLE_QUOTE;
+	if (c == '\"' && *bitflag_quote < 4 && !(*bitflag_quote
+				& FLAG_SINGLE_QUOTE))
+		*bitflag_quote ^= FLAG_DOUBLE_QUOTE;
+}
+
+void	check_quote2(char c, char *bitflag_quote)
+{
+	return;
 	if (c == '\\' && (*bitflag_quote < 4 || *bitflag_quote >= FLAG_ESCAPE)
 			&& !(*bitflag_quote & FLAG_SINGLE_QUOTE))
 		*bitflag_quote ^= FLAG_ESCAPE;
@@ -106,7 +124,7 @@ int bracket_num(char *s)
 
 int is_blank(char c)
 {
-	if (c < 64 && c)
+	if (c <= 64 && c)
 		return (1);
 	else
 		return (0);
@@ -132,6 +150,10 @@ int is_next_curly_bracket(int fd)
 	return (0);
 }
 
+int zzz(char *s){
+	return (1);
+}
+
 int is_func_dec(char *s, int fd)
 {
 	int i;
@@ -147,7 +169,9 @@ int is_func_dec(char *s, int fd)
 			while (is_blank(s[++i]))
 				;
 			if (s[i] == '{')
+			{write(1, "a\n", 2);
 				return (1);
+			}
 			else if (s[i] == '\0')
 				return (is_next_curly_bracket(fd));
 			else
@@ -166,6 +190,8 @@ void write_to_header(int fd, char *s)
 		;
 	write(fd, s, len);
 	write(fd, ";\n", 2);
+	
+	write(1, "OK\n", 3);
 }
 
 int is_same_extension(char *s, char *extension)
@@ -187,11 +213,11 @@ int is_same_extension(char *s, char *extension)
 	return (extension[extension_len] == s[i]);
 }
 
-void	ft_qsort(long long int *array, int left, int right)
+void	ft_qsort(unsigned long long int *array, int left, int right)
 {
 	int i;
 	int last;
-	int tmp;
+	unsigned long long int tmp;
 
 	if (left < right)
 	{
@@ -203,8 +229,8 @@ void	ft_qsort(long long int *array, int left, int right)
 			{
 				last++;
 				tmp = array[i];
-				array[i] = array[left];
-				array[left] = tmp;
+				array[i] = array[last];
+				array[last] = tmp;
 			}
 		}
 		tmp = array[last];
@@ -215,12 +241,19 @@ void	ft_qsort(long long int *array, int left, int right)
 	}
 }
 
-long long int ft_pow(long long int base, int n)
+unsigned long long int ft_pow(unsigned long long int base, int n)
 {
-	long long int tmp[30];
-	long long int sq_two[30];
-	long long int ret;
+	unsigned long long int tmp[30];
+	unsigned long long int sq_two[30];
+	unsigned long long int ret;
 	int i;
+
+	base = base + !(base % 2);
+	ret = 1;
+	while (n--)
+		ret *= base;
+	return (ret);
+
 
 	i = 0;
 	tmp[0] = base;
@@ -242,16 +275,20 @@ long long int ft_pow(long long int base, int n)
 	return (ret);
 }
 
-long long int str2long(char *s)
+unsigned long long int str2long(char *s)
 {
-	long long int ret;
+	unsigned long long int ret;
 
-	ret = 0;
+printf("\n------\n[%s]\n-------\n", s);
+	ret = 100;
 	while (*s)
 	{
-		ret = ft_pow(ret + (long long int)*s, (int)(*s % 27 + 3));
+		if (!is_blank(*s))
+			ret = (ret + 1) * ft_pow(ret + (unsigned long long int)*s, (int)((*s % 27) + 3));
 		s++;
+	//printf("%llu\n",ret);
 	}
+	printf("---%llu---\n\n",ret);
 	return (ret);
 }
 
@@ -260,19 +297,23 @@ char *extract_func_name(char *s)
 	int i;
 	int j;
 
-	i = -1;
-	while (!is_blank(s[++i]))
-		;
-	while (is_blank(s[i]))
-		i++;
-	j = 0;
-	while (s[i] != '(')
-		s[j++] = s[i++];
-	s[j] = '\0';
+	if ((i = find_bracket(s) - 1) >= 0)
+	{
+		while (i > 0 && is_blank(s[i]))
+			i--;
+		while (i > 0 && !is_blank(s[i]))
+			i--;
+		j = 0;
+		while (s[i] != '(')
+			s[j++] = s[i++];
+		s[j] = '\0';
+	}
+	else
+		ft_strcpy(s, "if");
 	return (s);
 }
 
-int input_existing_func(char *argv, long long int *func_name)
+int input_existing_func(char *argv, unsigned long long int *func_name)
 {
 	int fd;
 	char *line[2];
@@ -300,7 +341,7 @@ int input_existing_func(char *argv, long long int *func_name)
 	return (ret);
 }
 
-int nibun_find(long long int *array, int num, long long int n)
+int nibun_find(unsigned long long int *array, int num, unsigned long long int n)
 {
 	int mid;
 	int left;
@@ -322,43 +363,61 @@ int nibun_find(long long int *array, int num, long long int n)
 		return (0);
 }
 
-int is_func_existing(long long int *func_name, int func_num, char *s)
+int is_func_existing(unsigned long long int *func_name, int func_num, char *s)
 {
 	char tmp[MAX_FUNC];
 	int tmp2;
 
 	ft_strcpy(tmp, s);
+	if (!func_num)
+		return (0);
 	return (nibun_find(func_name, func_num, str2long(extract_func_name(tmp))));
 }
 
-void process_main(long long int *func_name, int func_num, int fd_read, int fd_write)
+void process_main(unsigned long long int *func_name, int func_num, int fd_read, int fd_write)
 {
 	char *line[2];
 	int i;
 
-	i = 0;
 	while (get_next_line(fd_read, line) > 0)
 	{
+		i = 0;
 		while (bracket_num(line[!!i++]))
 		{
 			if (get_next_line(fd_read, line + 1) <= 0)
+			{write(1, "1", 1);
 				return;
+			}
 			if (!(line[0] = newstrcat(line[0], line[1])))
+			{write(1, "2", 1);
 				return;
+			}
 		}
 		if (i > 1)
 			free(line[1]);
-		if (is_func_dec(line[0], fd_read) && is_func_existing(func_name, func_num, line[0]))
+		printf("%s\n", line[0]);
+		if (is_func_dec(line[0], fd_read) && !is_func_existing(func_name, func_num, line[0]))
 			write_to_header(fd_write, line[0]);
 		free(line[0]);
 	}
 	close(fd_read);
 }
 
+int ini_func_name(unsigned long long int *func_name)
+{
+	func_name[0] = str2long("if");
+	func_name[1] = str2long("while");
+	func_name[2] = str2long("for");
+	func_name[3] = str2long("do");
+	func_name[4] = str2long("else");
+	func_name[5] = str2long("else if");
+	return (6);
+}
+
 int main(int argc, char *argv[])
 {
 	int i;
-	long long int func_name[MAX_FUNC];
+	unsigned long long int func_name[MAX_FUNC];
 	int func_num;
 	int fd_write;
 
@@ -367,11 +426,19 @@ int main(int argc, char *argv[])
 	while (++i < argc)
 		if (is_same_extension(argv[i], ".h"))
 			func_num += input_existing_func(argv[i], func_name + func_num);
+			
+	func_num += ini_func_name(func_name);
 	if (func_num)
 		ft_qsort(func_name, 0, func_num - 1);
 	if ((fd_write = open("./generated_header.h", O_CREAT|O_WRONLY|O_TRUNC)) == -1)
 		return (-1);
-	while (++i <= argc)
+
+for (i = 0; i < func_num; i++)
+	printf("%llu\n", func_name[i]);
+	printf("\n\n\n");
+
+	i = 0;
+	while (++i < argc)
 		if (is_same_extension(argv[i], ".c"))
 			process_main(func_name, func_num, open(argv[i], O_RDONLY), fd_write);
 	close(fd_write);
