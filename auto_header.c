@@ -352,6 +352,7 @@ void process_main(long long int *func_name, int func_num, int fd_read, int fd_wr
 			write_to_header(fd_write, line[0]);
 		free(line[0]);
 	}
+	close(fd_read);
 }
 
 int main(int argc, char *argv[])
@@ -363,14 +364,15 @@ int main(int argc, char *argv[])
 
 	func_num = 0;
 	i = 0;
-	while (++i <= argc)
+	while (++i < argc)
 		if (is_same_extension(argv[i], ".h"))
 			func_num += input_existing_func(argv[i], func_name + func_num);
 	if (func_num)
 		ft_qsort(func_name, 0, func_num - 1);
-	if ((fd_write = open("./auto_header.h", O_CREAT|O_WRONLY|O_TRUNC)) == -1)
+	if ((fd_write = open("./generated_header.h", O_CREAT|O_WRONLY|O_TRUNC)) == -1)
 		return (-1);
 	while (++i <= argc)
 		if (is_same_extension(argv[i], ".c"))
 			process_main(func_name, func_num, open(argv[i], O_RDONLY), fd_write);
+	close(fd_write);
 }
