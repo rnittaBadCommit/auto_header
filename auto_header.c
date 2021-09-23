@@ -1,23 +1,25 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdio.h>
 #include "get_next_line.h"
-
+#include "./libft/libft.h"
 # define FLAG_DOUBLE_QUOTE 2
 # define FLAG_SINGLE_QUOTE 1
 # define FLAG_MINUS_ONE 4
 # define FLAG_ESCAPE 8
 
-# define MAX_FUNC 500
-# define MAX_FILE 200
+# define MAX_FUNC 5000
+# define MAX_FILE 2000
 
-int ft_strlen(char *s)
+int tmpstrstr(char *s, char c)
 {
 	int ret;
 
 	ret = -1;
 	while (s[++ret])
-		;
+		if (s[ret] == c)
+			return (ret + 1);
 	return (ret);
 }
 
@@ -124,9 +126,11 @@ int bracket_num(char *s)
 	return (num);
 }
 
+
+
 int is_blank(char c)
 {
-	if (c <= 64 && c)
+	if (c <= 32 && c)
 		return (1);
 	else
 		return (0);
@@ -136,6 +140,7 @@ int is_next_curly_bracket(int fd)
 {
 	char *line;
 	int i;
+	int ret;
 
 	i = -1;
 	while (get_next_line(fd, &line) > 0)
@@ -147,7 +152,9 @@ int is_next_curly_bracket(int fd)
 			free(line);
 			break;
 		}
-		return ((line[i] == '{'));
+		ret = (line[i] == '{');
+		free(line);
+		return (ret);
 	}
 	return (0);
 }
@@ -177,15 +184,30 @@ int is_func_dec(char *s, int fd)
 	return (0);
 }
 
-void write_to_header(int fd, char *s)
+void write_to_header(int fd, char *s, int i)
 {
 	int len;
+	char **line;
 
-	len = 0;
-	while (s[len++] != ')')
-		;
-	write(fd, s, len);
-	write(fd, ";\n", 2);
+	line = ft_split(s, '\n');
+	while (line[++i] && (len = -1))
+	{
+		while (is_blank(line[i][++len]))
+			;		
+		if (ft_isalnum(line[i][len]) && !ft_strchr(line[i], ';'))
+		{
+			write(fd, line[i], tmpstrstr(line[i], ')'));
+			if (ft_strchr(line[i], ')'))
+			{
+				write(fd, ";\n", 2);
+				free(line[i]);
+				free(line);
+				return;
+			}
+			write(fd, "\n", 1);
+		}
+		free(line[i]);
+	}
 }
 
 int is_same_extension(char *s, char *extension)
@@ -207,8 +229,7 @@ int is_same_extension(char *s, char *extension)
 	return (extension[extension_len] == s[i]);
 }
 
-void	ft_qsort(unsigned long long int *array,
-		int left, int right)
+void	ft_qsort(unsigned long long int *array, int left, int right)
 {
 	int i;
 	int last;
@@ -236,7 +257,7 @@ void	ft_qsort(unsigned long long int *array,
 	}
 }
 
-unsigned long long int ft_pow(unsigned long long int base, int n)
+unsigned long long int ft_pow(unsigned long long int base, unsigned long long int n)
 {
 	unsigned long long int tmp[30];
 	unsigned long long int sq_two[30];
@@ -278,7 +299,7 @@ unsigned long long int str2long(char *s)
 	while (*s)
 	{
 		if (!is_blank(*s))
-			ret = (ret + 1) * ft_pow(ret + (unsigned long long int)*s, (int)((*s % 27) + 3));
+			ret = (ret + 1) * ft_pow(ret + (unsigned long long int)*s, (unsigned long long)*s * (unsigned long long)*s);
 		s++;
 	}
 	return (ret);
@@ -358,7 +379,6 @@ int nibun_find(unsigned long long int *array, int num, unsigned long long int n)
 int is_func_existing(unsigned long long int *func_name, int func_num, char *s)
 {
 	char tmp[MAX_FUNC];
-	int tmp2;
 
 	ft_strcpy(tmp, s);
 	if (!func_num)
@@ -384,9 +404,10 @@ void process_main(unsigned long long int *func_name, int func_num, int fd_read, 
 		if (i > 1)
 			free(line[1]);
 		if (is_func_dec(line[0], fd_read) && !is_func_existing(func_name, func_num, line[0]))
-			write_to_header(fd_write, line[0]);
+			write_to_header(fd_write, line[0], -1);
 		free(line[0]);
 	}
+	free(line[0]);
 	close(fd_read);
 }
 
@@ -398,7 +419,8 @@ int ini_func_name(unsigned long long int *func_name)
 	func_name[3] = str2long("do");
 	func_name[4] = str2long("else");
 	func_name[5] = str2long("else if");
-	return (6);
+	func_name[6] = str2long("main");
+	return (7);
 }
 
 int is_generated_h(char *s)
@@ -441,16 +463,20 @@ int some_args(int argc, char *argv[])
 	return (0);
 }
 
-void no_args(int argc)
+void free_gnl(int argc, char **argv)
 {
-	int i;
+	while (--argc > 0)
+		free(argv[argc]);
+}
+
+void no_args(int argc, int i)
+{
 	unsigned long long int func_name[MAX_FUNC];
 	char *argv[MAX_FILE];
 	int func_num;
 	int fd_write;
 
-	i = -1;
-	system("find > ./generated_header.h");
+	system("find | grep -e \"\\.c\" -e \"\\.h\" | grep -v \"\\.c.\" | grep -v \"\\.h.\" > ./generated_header.h");
 	fd_write = open("./generated_header.h", O_RDONLY);
 	while (get_next_line(fd_write, argv + ++i) > 0)
 		argc++;
@@ -469,13 +495,13 @@ void no_args(int argc)
 		if (is_same_extension(argv[i], ".c"))
 			process_main(func_name, func_num, open(argv[i], O_RDONLY), fd_write);
 	close(fd_write);
+	free_gnl(argc, argv);
 }
 
 int main(int argc, char *argv[])
 {
-	
 	if (argc == 1)
-		no_args(0);
+		no_args(1, 0);
 	else
 		return (some_args(argc, argv));
 	return (0);
