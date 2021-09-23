@@ -270,7 +270,7 @@ unsigned long long int ft_pow(unsigned long long int base, unsigned long long in
 	while (sq_two[i++] < n && i < 30)
 	{
 		tmp[i] = tmp[i - 1] * tmp[i - 1];
-		sq_two[i] = sq_two[i - 1] * sq_two[i - 1];
+		sq_two[i] *= 2;
 	}
 	ret = 1;
 	while (i-- > 0)
@@ -289,12 +289,14 @@ unsigned long long int str2long(char *s)
 	unsigned long long int ret;
 
 	ret = 100;
+	printf("\n[%s]\n", s);
 	while (*s)
 	{
 		if (!is_blank(*s))
 			ret = (ret + 1) * ft_pow(ret + (unsigned long long int)*s, (unsigned long long)*s * (unsigned long long)*s);
 		s++;
 	}
+	printf("%llu", ret);
 	return (ret);
 }
 
