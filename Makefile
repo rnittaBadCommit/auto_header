@@ -6,6 +6,7 @@ SANI = -fsanitize=address
 LEAK = -fsanitize=leak
 SRCS = auto_header.c get_next_line.c get_next_line_utils.c
 OBJS = $(SRCS:.c=.o)
+	GIT = git
 
 all: $(NAME)
 
