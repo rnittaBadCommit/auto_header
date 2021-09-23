@@ -264,13 +264,6 @@ unsigned long long int ft_pow(unsigned long long int base, unsigned long long in
 	unsigned long long int ret;
 	int i;
 
-	base = base + !(base % 2);
-	ret = 1;
-	while (n--)
-		ret *= base;
-	return (ret);
-
-
 	i = 0;
 	tmp[0] = base;
 	sq_two[0] = 1;
