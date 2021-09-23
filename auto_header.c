@@ -289,14 +289,12 @@ unsigned long long int str2long(char *s)
 	unsigned long long int ret;
 
 	ret = 100;
-	printf("\n[%s]\n", s);
 	while (*s)
 	{
 		if (!is_blank(*s))
 			ret = (ret + 1) * ft_pow(ret + (unsigned long long int)*s, (unsigned long long)*s * (unsigned long long)*s);
 		s++;
 	}
-	printf("%llu", ret);
 	return (ret);
 }
 
