@@ -184,6 +184,28 @@ int is_func_dec(char *s, int fd)
 	return (0);
 }
 
+char *ft_strstr(char *s1, char *s2)
+{
+	int i;
+
+	while (*s1)
+	{
+		i = 0;
+		while (s2[i])
+		{
+			if (s1[i] == s2[i])
+				i++;
+			else
+			{
+				s1++;
+				break;
+			}
+		}
+		return (s1);
+	}
+	return (NULL);
+}
+
 void write_to_header(int fd, char *s, int i)
 {
 	int len;
@@ -193,8 +215,8 @@ void write_to_header(int fd, char *s, int i)
 	while (line[++i] && (len = -1))
 	{
 		while (is_blank(line[i][++len]))
-			;		
-		if (ft_isalnum(line[i][len]) && !ft_strchr(line[i], ';'))
+			;
+		if (ft_isalnum(line[i][len]) && !ft_strchr(line[i], ';') && ft_strstr(line[i], "static") != line[i])
 		{
 			write(fd, line[i], tmpstrstr(line[i], ')'));
 			if (ft_strchr(line[i], ')'))
